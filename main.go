@@ -1,3 +1,6 @@
+/*
+Conatins 'main' function with logic to iterate and print/display drops
+*/
 package main
 
 import (
@@ -58,38 +61,51 @@ func main() {
 
 	// loop indefinitely
 	for {
+		// check channel for key press event
 		select {
 		case ev := <-eventChan:
 			switch ev := ev.(type) {
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
+					//  pause a bit 10 X loop delay
+					time.Sleep(10 * delay())
+					// .. and exit main
 					return
 				}
 			}
 		default:
 			// continue
 		}
+
+		// if not esc|ctrl+c key pressed - carry on..
+
 		// reset to black for erasing pervious drop trail
 		clearupScreen(width, height, screen)
 
+		// iterate through the drop trails
+		// ..across the screen width
 		for i := range drops {
 			d := &drops[i]
 
+			// for each drop trail, print
+			// .. the character at (x,y) position
 			for j := 0; j < d.length; j++ {
 				y := d.y - j
 				if y < 0 || y >= height {
 					continue
 				}
-				char := rune(rand.Intn(94) + 33) // ASCII 33–126
-				var style tcell.Style
-				if j == 0 {
-					// Head character with glow (bright green on black)
-					style = tcell.StyleDefault.Foreground(tcell.ColorLime).Background(tcell.ColorBlack).Bold(true)
-				} else {
-					style = tcell.StyleDefault.Foreground(colors[min(j, len(colors)-1)]).Background(tcell.ColorBlack)
-				}
+
+				// rune/char to display
+				char := getChar(i, j)
+
+				// prepare font, color style
+				// .. for displaying the character
+				style := getStyle(i, j, colors)
+
+				// print the drop character
 				screen.SetContent(d.x, y, char, nil, style)
 			}
+			// move drop position down by its speed step
 			d.y += d.speed
 
 			// reset position if reached bottom
@@ -98,53 +114,8 @@ func main() {
 			}
 		}
 		screen.Show()
-		time.Sleep(70 * time.Millisecond)
+		// delay between iterations
+		time.Sleep(delay())
 	}
 
-}
-
-// new screen object
-func initScreen() tcell.Screen {
-	screen, err := tcell.NewScreen()
-	if err != nil {
-		panic(err)
-	}
-	if err := screen.Init(); err != nil {
-		panic(err)
-	}
-	return screen
-}
-
-// height drop starts falling from
-func getDropHeight(height int) int {
-	return rand.Intn(height / 2)
-}
-
-// speed of each drop trail
-func getDropSpeed() int {
-	return rand.Intn(3) + 1
-}
-
-// varying color shades for drop trail
-func initColorShades() []tcell.Color {
-	return []tcell.Color{
-		tcell.ColorGreen,
-		tcell.ColorDarkGreen,
-		tcell.ColorDarkGreen,
-		tcell.ColorOlive,
-		tcell.ColorOlive,
-		tcell.ColorForestGreen,
-		tcell.ColorForestGreen,
-		tcell.ColorBlack,
-	}
-}
-
-// reset-clear screen
-func clearupScreen(width, height int, screen tcell.Screen) {
-	black := tcell.StyleDefault.Background(tcell.ColorBlack)
-	for x := range width {
-		for y := range height {
-			screen.SetContent(x, y, ' ', nil, black)
-		}
-	}
 }
